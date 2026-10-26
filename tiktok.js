@@ -49,6 +49,15 @@
     }
     return null;
   }
+  // { hasMore, total } from the same component, so the scan knows whether TikTok has more to send
+  function tiktokListState(box) {
+    const fiberKey = Object.keys(box).find((k) => k.startsWith("__reactFiber"));
+    for (let f = fiberKey && box[fiberKey], i = 0; f && i < 6; i++, f = f.return) {
+      const p = f.memoizedProps;
+      if (p && typeof p.hasMore === "boolean") return { hasMore: p.hasMore, total: Number(p.total) || 0 };
+    }
+    return null;
+  }
 
   socialUnfollower({
     id: "tbu",
@@ -64,14 +73,22 @@
       const box = scrollBox(dialog);
       const seen = new Map();
       let idleRounds = 0;
-      // TikTok sometimes pauses several seconds between pages, so allow ~25s of no growth before calling it the end
-      while (idleRounds < 12 && !ctx.stopped()) {
+      let state = null;
+      // TikTok can pause a minute or more between pages. While it says there's more, wait up to ~3 minutes
+      // of no growth; if we can't read its state (e.g. after a TikTok update), give up after ~25s.
+      while (!ctx.stopped() && idleRounds < (state && state.hasMore ? 90 : 12)) {
         const before = seen.size;
         for (const b of followButtons(dialog)) {
           const u = rowInfo(b);
           if (u && !seen.has(u.username)) seen.set(u.username, u);
         }
-        ctx.status(ctx.t("ttLoading", seen.size));
+        state = tiktokListState(box);
+        if (state && !state.hasMore) break;
+        ctx.status(
+          idleRounds > 12 && state
+            ? ctx.t("ttWaiting", seen.size, state.total)
+            : state ? ctx.t("ttLoadingOf", seen.size, state.total) : ctx.t("ttLoading", seen.size)
+        );
         // nudge every way TikTok might watch for "reached the bottom" so it loads the next batch
         const buttons = followButtons(dialog);
         if (buttons.length) buttons[buttons.length - 1].scrollIntoView({ block: "end" });
@@ -85,7 +102,10 @@
         await new Promise((r) => setTimeout(r, 1200 + Math.random() * 800)); // real time even in demo mode: the list loads lazily
         idleRounds = seen.size === before ? idleRounds + 1 : 0;
       }
-      return { users: [...seen.values()].filter((u) => ONE_WAY.includes(label(u.button))), partial: false };
+      const users = [...seen.values()].filter((u) => ONE_WAY.includes(label(u.button)));
+      // Everyone found is a confirmed non-follower, so an incomplete list still allows unfollowing; just say so.
+      const note = state && state.hasMore && !ctx.stopped() ? ctx.t("ttIncomplete", users.length, seen.size, state.total) : undefined;
+      return { users, partial: false, note };
     },
 
     async unfollow(user, ctx) {

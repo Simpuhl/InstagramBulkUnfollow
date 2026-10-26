@@ -1,6 +1,6 @@
 // Shared corner panel for the Social Unfollower bookmarklets. build.js bundles it in front of each platform script.
 // platform: { id, name, startKey, filters, defaults: { delay, restEvery, restSeconds, dailyLimit },
-//             profileUrl(user), scan(ctx) -> { users, partial }, unfollow(user, ctx) -> { outcome, detail }, legacyWhitelist?() }
+//             profileUrl(user), scan(ctx) -> { users, partial, note? }, unfollow(user, ctx) -> { outcome, detail }, legacyWhitelist?() }
 function socialUnfollower(platform) {
   if (document.getElementById("su-panel")) return;
 
@@ -51,6 +51,9 @@ function socialUnfollower(platform) {
       ttStart: 'Open your profile, click your "Following" count, then press Scan.',
       ttNoList: 'couldn\'t find your Following list. Open your profile and click your "Following" count first',
       ttLoading: "Loading your Following list… %s accounts so far",
+      ttLoadingOf: "Loading your Following list… %s of %s",
+      ttWaiting: "TikTok is pausing before the next batch. Still waiting… (%s of %s loaded)",
+      ttIncomplete: "Found %s non-followers in the first %s of %s accounts; TikTok stopped sending more. After unfollowing these, scan again for the rest.",
     },
     es: {
       notFollowing: "%s no te siguen",
@@ -86,6 +89,9 @@ function socialUnfollower(platform) {
       ttStart: 'Abre tu perfil, haz clic en tu número de "Siguiendo" y pulsa Escanear.',
       ttNoList: 'no se encontró tu lista de Siguiendo. Abre tu perfil y haz clic en tu número de "Siguiendo" primero',
       ttLoading: "Cargando tu lista de Siguiendo… %s cuentas por ahora",
+      ttLoadingOf: "Cargando tu lista de Siguiendo… %s de %s",
+      ttWaiting: "TikTok está haciendo una pausa antes del siguiente lote. Esperando… (%s de %s cargadas)",
+      ttIncomplete: "Se encontraron %s que no te siguen en las primeras %s de %s cuentas; TikTok dejó de enviar más. Después de dejar de seguirlas, vuelve a escanear para el resto.",
     },
   };
   let lang = load("su_lang", null) || ((navigator.language || "").toLowerCase().startsWith("es") ? "es" : "en");
@@ -137,7 +143,7 @@ function socialUnfollower(platform) {
       users = result.users;
       partial = result.partial;
       save(key("last_scan"), { time: Date.now(), partial, users: users.map(({ button, result, ...u }) => u) });
-      message = partial ? t("scanPartial", users.length) : t("scanDone", users.length);
+      message = result.note || (partial ? t("scanPartial", users.length) : t("scanDone", users.length));
     } catch (e) {
       console.error(e);
       users = [];
