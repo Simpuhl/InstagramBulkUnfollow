@@ -379,7 +379,7 @@ function socialUnfollower(platform) {
       const result = u.result ? `<span class="su-${u.result}">${t(u.result === "done" ? "unfollowed" : "failed")}</span>` : "";
       return `<li class="${isWl(u) ? "su-wl" : ""}">
         <input type="checkbox" data-user="${esc(u.username)}" ${selected.has(u.username) ? "checked" : ""} ${busy || u.result === "done" ? "disabled" : ""}>
-        <img src="${esc(u.avatar || "")}" alt="" referrerpolicy="no-referrer">
+        <img src="${esc(u.avatar || "")}" alt="" loading="lazy">
         <div class="su-who"><a href="${esc(platform.profileUrl(u))}" target="_blank" rel="noreferrer">${esc(u.username)}</a>${u.verified ? '<span class="su-tag">✔</span>' : ""}${u.isPrivate ? `<span class="su-tag">${t("private").toLowerCase()}</span>` : ""}<small>${esc(u.name || "")}</small></div>
         ${result}
         <button class="su-star" data-action="star" data-user="${esc(u.username)}" title="★">★</button>
