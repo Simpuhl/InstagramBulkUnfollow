@@ -41,4 +41,4 @@ node build.js
 
 ## Credits
 
-The Instagram tool is based on [InstagramUnfollowers](https://github.com/davidarroyo1234/InstagramUnfollowers) by David Arroyo, MIT licensed. See [LICENSE](LICENSE).
+`instagram.js` is based on [InstagramUnfollowers](https://github.com/davidarroyo1234/InstagramUnfollowers) by David Arroyo, MIT licensed; its copyright notice is kept in [LICENSE](LICENSE). The TikTok tool is original to this project.
