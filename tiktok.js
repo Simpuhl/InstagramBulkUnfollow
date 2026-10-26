@@ -37,6 +37,19 @@
     );
   }
 
+  // TikTok's own "load next page" callback for this list. Its scroll trigger often never fires (the list
+  // stops at 30), so we find the callback on the list's React component and call it ourselves.
+  function tiktokLoadMore(box) {
+    const fiberKey = Object.keys(box).find((k) => k.startsWith("__reactFiber"));
+    for (let f = fiberKey && box[fiberKey], i = 0; f && i < 6; i++, f = f.return) {
+      for (let h = f.memoizedState, j = 0; h && j < 100; j++, h = h.next) {
+        const v = h.memoizedState;
+        if (Array.isArray(v) && typeof v[0] === "function" && /get\w*Following\w*List/.test(String(v[0]))) return v[0];
+      }
+    }
+    return null;
+  }
+
   socialUnfollower({
     id: "tbu",
     name: "TikTok Unfollower",
@@ -51,7 +64,8 @@
       const box = scrollBox(dialog);
       const seen = new Map();
       let idleRounds = 0;
-      while (idleRounds < 6 && !ctx.stopped()) {
+      // TikTok sometimes pauses several seconds between pages, so allow ~25s of no growth before calling it the end
+      while (idleRounds < 12 && !ctx.stopped()) {
         const before = seen.size;
         for (const b of followButtons(dialog)) {
           const u = rowInfo(b);
@@ -63,6 +77,11 @@
         if (buttons.length) buttons[buttons.length - 1].scrollIntoView({ block: "end" });
         box.scrollTop = box.scrollHeight;
         box.dispatchEvent(new Event("scroll"));
+        try {
+          tiktokLoadMore(box)?.(); // looked up each round: TikTok recreates it as the list grows
+        } catch (e) {
+          console.warn("TikTok load-more failed:", e);
+        }
         await new Promise((r) => setTimeout(r, 1200 + Math.random() * 800)); // real time even in demo mode: the list loads lazily
         idleRounds = seen.size === before ? idleRounds + 1 : 0;
       }
