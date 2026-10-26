@@ -308,6 +308,18 @@ function socialUnfollower(platform) {
   const foot = $(".su-foot");
   const settingsView = $(".su-settings");
 
+  // Sites like TikTok cancel wheel scrolling outside their own popups, so the panel scrolls its lists itself.
+  panel.addEventListener(
+    "wheel",
+    (e) => {
+      const box = e.target.closest("ul, .su-settings");
+      if (!box) return;
+      box.scrollTop += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      e.preventDefault();
+    },
+    { passive: false }
+  );
+
   function matches(u) {
     const q = search.value.trim().toLowerCase();
     if (q && !u.username.toLowerCase().includes(q) && !(u.name || "").toLowerCase().includes(q)) return false;
