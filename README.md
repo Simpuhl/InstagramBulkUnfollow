@@ -5,7 +5,7 @@ Bookmarklets that find the accounts you follow that don't follow you back, and l
 ## Install
 
 1. Open https://simpuhl.github.io/InstagramBulkUnfollow/.
-2. Drag the **Instagram Unfollowers** and/or **TikTok Unfollowers** button to your bookmarks bar.
+2. Drag the **Instagram Unfollower** and/or **TikTok Unfollower** button to your bookmarks bar.
 
 ## Instagram
 

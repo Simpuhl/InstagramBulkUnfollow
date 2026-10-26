@@ -9,12 +9,12 @@ function bookmarklet(file) {
 
 const tools = [
   {
-    name: "Instagram Unfollowers",
+    name: "Instagram Unfollower",
     file: "instagram.js",
     steps: ["Open <b>www.instagram.com</b> and log in.", "Click the bookmark, then <b>Run Scan</b>."],
   },
   {
-    name: "TikTok Unfollowers",
+    name: "TikTok Unfollower",
     file: "tiktok.js",
     steps: [
       "Open <b>www.tiktok.com</b>, log in, and go to your profile.",

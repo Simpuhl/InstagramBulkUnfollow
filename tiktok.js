@@ -200,7 +200,7 @@
       </li>`;
     };
     body.innerHTML = `
-      <header><span>TikTok Unfollowers · ${active.length} not following back</span><button data-action="close" title="Close">✕</button></header>
+      <header><span>TikTok Unfollower · ${active.length} not following back</span><button data-action="close" title="Close">✕</button></header>
       <div class="tbu-msg">${esc(message)} <span style="opacity:.7">(${todayCount()}/${DAILY_LIMIT} unfollows today)</span></div>
       <div class="tbu-actions">
         <button class="tbu-primary" data-action="scan" ${busy ? "disabled" : ""}>Scan</button>
