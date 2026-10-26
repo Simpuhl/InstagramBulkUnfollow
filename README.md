@@ -1,6 +1,6 @@
 # Social Unfollower
 
-Bookmarklets that find the accounts you follow that don't follow you back, and let you unfollow them in bulk. Works on **Instagram** and **TikTok**. Everything runs in your own browser; nothing is sent anywhere else.
+Bookmarklets that find the accounts you follow that don't follow you back, and let you unfollow them in bulk. Works on **Instagram** and **TikTok**. A small panel opens in the corner of the site; everything runs in your own browser and nothing is sent anywhere else.
 
 ## Install
 
@@ -10,35 +10,44 @@ Bookmarklets that find the accounts you follow that don't follow you back, and l
 ## Instagram
 
 1. Go to www.instagram.com, log in, and click the bookmark.
-2. Click **Run Scan** and wait for it to finish.
-3. Tick people one by one, or click **Select all non-followers** in the sidebar.
-4. Click **Unfollow**.
+2. Click **Scan** and wait for it to finish.
+3. Tick people, or use **Select all non-followers** or the **+ Verified / + Private / + No pic** quick-selects.
+4. Click **Unfollow**, then **Yes, unfollow** to confirm.
 
-To protect someone, tick them and click **Add to Whitelist**, or click their avatar. Whitelisted accounts are never selected.
-
-Instagram may cut a scan short or block unfollows if you do too much at once. The script waits 4 seconds between unfollows and 5 minutes after every 5. You can change this in Settings, at your own risk. If a scan is interrupted, Unfollow stays disabled so you don't act on a partial list.
+If a scan is interrupted, Unfollow stays off so you don't act on a partial list.
 
 ## TikTok
 
 1. Go to www.tiktok.com, log in, and open your profile.
 2. Click your **Following** count so the list opens.
 3. Click the bookmark, then **Scan**. It scrolls the list and collects everyone whose button says "Following" (not "Friends").
-4. Tick people, or click **Select all non-followers**, then **Unfollow**.
+4. Tick people or click **Select all non-followers**, then **Unfollow** and **Yes, unfollow**.
 
-Click the ★ next to someone, or tick them and click **Add to whitelist**, to protect them.
+It reads the button labels, so it works when TikTok is set to English or Spanish. If the scan stops at 30 accounts, TikTok isn't loading more of the list in that browser: unfollow that batch, close and reopen your Following list, and scan again.
 
-TikTok blocks accounts that unfollow too fast, so this tool waits 4–8 seconds between unfollows, rests 60 seconds after every 10, and stops at 150 a day. It reads the button labels, so it works when TikTok is set to English or Spanish.
+## Both tools
 
-If the scan stops at 30 accounts, TikTok isn't loading more of the list in that browser. Unfollow that batch, close and reopen your Following list, and scan again to get the next 30.
+- **Whitelist:** click ★ next to someone, or tick people and click **Add to whitelist**. Whitelisted accounts are never selected or unfollowed. In ⚙ Settings you can export, import, paste usernames into, or clear the whitelist.
+- **Search** the list, and **Copy list**, **JSON** or **CSV** to export who doesn't follow you back.
+- **Load last scan** reopens your previous results without rescanning.
+- **⚙ Settings:** time between unfollows, rest breaks, an optional daily cap (off by default), and English/Spanish.
+
+Default pacing, to avoid temporary blocks from the platforms:
+- Instagram: about 4 seconds between unfollows and a 5-minute rest after every 5.
+- TikTok: about 4 seconds between unfollows and a 1-minute rest after every 10.
+
+If the platform blocks an action, the tool stops and tells you.
 
 ## Develop
 
-Edit `instagram.js` or `tiktok.js`, then rebuild the install page:
+`panel.js` is the shared panel; `instagram.js` and `tiktok.js` are the platform parts. After editing, rebuild the install page:
 
 ```bash
 node build.js
 ```
 
+On `localhost`, the Instagram tool runs in demo mode with fake accounts.
+
 ## Credits
 
-`instagram.js` is based on [InstagramUnfollowers](https://github.com/davidarroyo1234/InstagramUnfollowers) by David Arroyo, MIT licensed; its copyright notice is kept in [LICENSE](LICENSE). The TikTok tool is original to this project.
+`instagram.js` is based on [InstagramUnfollowers](https://github.com/davidarroyo1234/InstagramUnfollowers) by David Arroyo, MIT licensed; its copyright notice is kept in [LICENSE](LICENSE). The panel and the TikTok tool are original to this project.

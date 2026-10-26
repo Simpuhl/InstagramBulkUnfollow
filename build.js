@@ -1,8 +1,12 @@
 // Builds index.html (the drag-to-bookmarks page) from the bookmarklet scripts. Run: node build.js
 const fs = require("fs");
 
+// Each bookmarklet is the shared panel plus one platform script, wrapped so nothing leaks into the page.
+const bundle = (file) =>
+  `(() => {\n${fs.readFileSync(__dirname + "/panel.js", "utf8")}\n${fs.readFileSync(__dirname + "/" + file, "utf8")}\n})();`;
+
 function bookmarklet(file) {
-  const code = fs.readFileSync(__dirname + "/" + file, "utf8").trim();
+  const code = bundle(file).trim();
   new Function(code); // throws on a syntax error before we publish a broken bookmarklet
   return ("javascript:" + encodeURIComponent(code)).replace(/"/g, "%22");
 }
@@ -11,7 +15,7 @@ const tools = [
   {
     name: "Instagram Unfollower",
     file: "instagram.js",
-    steps: ["Open <b>www.instagram.com</b> and log in.", "Click the bookmark, then <b>Run Scan</b>."],
+    steps: ["Open <b>www.instagram.com</b> and log in.", "Click the bookmark, then <b>Scan</b>."],
   },
   {
     name: "TikTok Unfollower",
