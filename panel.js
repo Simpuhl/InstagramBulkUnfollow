@@ -279,6 +279,7 @@ function socialUnfollower(platform) {
     #su-panel li{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:7px}
     #su-panel li:hover{background:rgba(255,255,255,.05)}
     #su-panel li img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#333;flex:none}
+    #su-panel li .su-ava{width:36px;height:36px;border-radius:50%;background:#333;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:#e0a33a}
     #su-panel li .su-who{flex:1;min-width:0}
     #su-panel li a{color:#f7f1e8;font-weight:700;text-decoration:none}
     #su-panel li small{display:block;color:#ada79d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -313,6 +314,21 @@ function socialUnfollower(platform) {
   const list = $("ul");
   const foot = $(".su-foot");
   const settingsView = $(".su-settings");
+
+  // Profile picture links expire (e.g. in a saved scan) or get blocked, so swap broken ones for a letter avatar.
+  // Error events don't bubble, hence the capture listener.
+  panel.addEventListener(
+    "error",
+    (e) => {
+      const img = e.target;
+      if (img.tagName !== "IMG" || !img.closest("li")) return;
+      const letter = document.createElement("span");
+      letter.className = "su-ava";
+      letter.textContent = (img.closest("li").querySelector("a")?.textContent || "?").charAt(0).toUpperCase();
+      img.replaceWith(letter);
+    },
+    true
+  );
 
   // Sites like TikTok cancel wheel scrolling outside their own popups, so the panel scrolls its lists itself.
   panel.addEventListener(
