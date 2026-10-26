@@ -29,6 +29,8 @@ Click the ★ next to someone, or tick them and click **Add to whitelist**, to p
 
 TikTok blocks accounts that unfollow too fast, so this tool waits 4–8 seconds between unfollows, rests 60 seconds after every 10, and stops at 150 a day. It reads the button labels, so it works when TikTok is set to English or Spanish.
 
+If the scan stops at 30 accounts, TikTok isn't loading more of the list in that browser. Unfollow that batch, close and reopen your Following list, and scan again to get the next 30.
+
 ## Develop
 
 Edit `instagram.js` or `tiktok.js`, then rebuild the install page:

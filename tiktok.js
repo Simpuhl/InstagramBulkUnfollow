@@ -28,12 +28,14 @@
   let selected = new Set();
   let busy = false;
   let stopRequested = false;
+  let confirming = false; // in-panel "are you sure", since some browsers silently block confirm()
   let message = 'Open your profile, click your "Following" count, then press Scan.';
 
   const label = (button) => button.textContent.trim().toLowerCase();
-  const findDialog = () => document.querySelector('[role="dialog"]');
   const followButtons = (root) =>
     [...root.querySelectorAll("button")].filter((b) => !b.closest("#tbu-panel") && [...MUTUAL, ...ONE_WAY].includes(label(b)));
+  // other popups (like the inbox) are dialogs too, so pick the one that holds the Following list
+  const findDialog = () => [...document.querySelectorAll('[role="dialog"]')].find((d) => followButtons(d).length);
 
   function rowInfo(button) {
     let row = button;
@@ -67,7 +69,8 @@
   async function scan() {
     const dialog = findDialog();
     if (!dialog) {
-      alert('Open your TikTok profile and click your "Following" count first, then press Scan.');
+      message = 'Couldn\'t find your Following list. Open your profile, click your "Following" count, then press Scan.';
+      render();
       return;
     }
     busy = true;
@@ -100,9 +103,9 @@
 
   async function unfollow() {
     const queue = users.filter((u) => selected.has(u.username) && !whitelist.has(u.username) && u.result !== "done");
-    if (!queue.length) return alert("Tick at least one account first.");
-    if (!confirm(`Unfollow ${queue.length} accounts? This goes slowly to avoid TikTok blocks.`)) return;
+    if (!queue.length) return;
     busy = true;
+    confirming = false;
     stopRequested = false;
     let done = 0;
     for (const u of queue) {
@@ -204,7 +207,9 @@
         <button data-action="all" ${busy || !active.length ? "disabled" : ""}>Select all non-followers</button>
         <button data-action="none" ${busy || !selected.size ? "disabled" : ""}>Clear</button>
         <button data-action="wl-add" ${busy || !selected.size ? "disabled" : ""}>Add to whitelist (${selected.size})</button>
-        <button class="tbu-danger" data-action="unfollow" ${busy || !selected.size ? "disabled" : ""}>Unfollow (${selected.size})</button>
+        ${confirming
+          ? `<button class="tbu-danger" data-action="unfollow-yes">Yes, unfollow ${selected.size}</button><button data-action="unfollow-no">Cancel</button>`
+          : `<button class="tbu-danger" data-action="unfollow" ${busy || !selected.size ? "disabled" : ""}>Unfollow (${selected.size})</button>`}
         ${busy ? '<button data-action="stop">Stop</button>' : ""}
       </div>
       <ul>${active.map(row).join("")}${wl.length ? `<li style="color:#ada79d;font-size:12px;font-weight:800">WHITELISTED (${wl.length})</li>` + wl.map(row).join("") : ""}</ul>`;
@@ -222,7 +227,9 @@
     if (action === "close") { stopRequested = true; panel.remove(); }
     if (action === "stop") { stopRequested = true; message = "Stopping…"; render(); }
     if (action === "scan") scan();
-    if (action === "unfollow") unfollow();
+    if (action === "unfollow") { confirming = true; render(); }
+    if (action === "unfollow-no") { confirming = false; render(); }
+    if (action === "unfollow-yes") unfollow();
     if (action === "all") { users.forEach((u) => !whitelist.has(u.username) && u.result !== "done" && selected.add(u.username)); render(); }
     if (action === "none") { selected = new Set(); render(); }
     if (action === "wl-add") toggleWhitelist([...selected], true);
