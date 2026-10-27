@@ -48,7 +48,3 @@ Neither site publishes unfollow limits, so the tools don't guess:
 - TikTok has been tested on mock Following-list pages with a fake commit endpoint (confirmed, empty-reply, too-frequent, and saved-scan cases).
 - Instagram's and TikTok's security settings block loading scripts from other sites, so live testing means using the bookmarklet or pasting the bundle into the page.
 - Whitelists live in browser storage and can be wiped (embedded browsers lose them on restart). Check the "★ N" count before unfollowing.
-
-## Open ideas
-
-- An allow-list of TikTok domains for Technitium, so DNS filtering can stay on.
