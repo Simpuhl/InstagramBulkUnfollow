@@ -59,6 +59,34 @@
     return null;
   }
 
+  // Records TikTok's follow/unfollow requests and their replies in window.__suCommits. Fetch/XHR hooks give the
+  // reply body; the PerformanceObserver catches the request even if TikTok's code bypasses the hooks (size only).
+  let emptyReplies = 0;
+  function watchCommits() {
+    if (window.__suCommits) return;
+    const commits = (window.__suCommits = []);
+    const isCommit = (url) => /\/api\/commit\/follow\/user\//.test(url);
+    const record = (url, fields) => {
+      const entry = commits.find((c) => c.url === url && c.at > Date.now() - 15000);
+      entry ? Object.assign(entry, fields) : commits.push({ url, at: Date.now(), ...fields });
+    };
+    const origFetch = window.fetch;
+    window.fetch = async function (...args) {
+      const res = await origFetch.apply(this, args);
+      const url = new URL(String(args[0] && args[0].url ? args[0].url : args[0]), location.href).href;
+      if (isCommit(url)) res.clone().text().then((text) => record(url, { text }), () => record(url, { text: "" }));
+      return res;
+    };
+    const open = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+      if (isCommit(String(url))) this.addEventListener("loadend", () => record(new URL(url, location.href).href, { text: this.responseText || "" }));
+      return open.call(this, method, url, ...rest);
+    };
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) if (isCommit(e.name)) record(e.name, { size: e.decodedBodySize });
+    }).observe({ type: "resource", buffered: false });
+  }
+
   socialUnfollower({
     id: "tbu",
     name: "TikTok Unfollower",
@@ -110,22 +138,45 @@
     },
 
     async unfollow(user, ctx) {
+      watchCommits();
       // TikTok may re-render the list (or this is a cached scan), so find the button again if ours is gone
       let b = user.button && user.button.isConnected ? user.button : null;
       if (!b) {
         const fresh = followButtons(findDialog() || document).map(rowInfo).find((x) => x && x.username === user.username);
         b = fresh && fresh.button;
       }
+      // after a rejected unfollow TikTok shows "Follow" for a moment before flipping back; wait for that on a retry
+      for (let i = 0; i < 20 && b && !ONE_WAY.includes(label(b)); i++) await new Promise((r) => setTimeout(r, 200));
       if (!b || !ONE_WAY.includes(label(b))) return { outcome: "failed", detail: "not in the open Following list" };
       b.scrollIntoView({ block: "center" });
+      const since = Date.now();
       b.click();
-      await new Promise((r) => setTimeout(r, 1500));
-      if (!ONE_WAY.includes(label(b))) return { outcome: "unfollowed" };
-      // TikTok says so in a toast when you're going too fast
-      const warning = [...document.querySelectorAll('[role="alert"], [class*="toast" i], [class*="Toast"]')]
-        .map((el) => el.textContent)
-        .find((text) => /too fast|too many|try again later|limit|frequent|slow down|demasiado|más tarde|límite/i.test(text));
-      return warning ? { outcome: "blocked", detail: warning.trim() } : { outcome: "failed", detail: "button didn't change after clicking" };
+
+      // The button flips to "Follow" before TikTok's server answers, so judge by the server's reply instead.
+      let reply;
+      for (let i = 0; i < 40 && !reply; i++) {
+        await new Promise((r) => setTimeout(r, 200));
+        reply = window.__suCommits.find((c) => c.at >= since && /[?&]action_type=0\b/.test(c.url) && (c.text !== undefined || c.size !== undefined));
+      }
+      if (!reply) return { outcome: "failed", detail: "TikTok didn't send an unfollow request after the click" };
+      if (reply.text === undefined) await new Promise((r) => setTimeout(r, 500)); // body may arrive just after the timing entry
+      const text = reply.text;
+      if (text === "" || (text === undefined && reply.size === 0)) {
+        // an empty reply means TikTok's server ignored the request (it does this when it treats the browser as a bot)
+        emptyReplies++;
+        return emptyReplies >= 3 ? { outcome: "fatal", detail: ctx.t("ttRejected") } : { outcome: "failed", detail: "TikTok sent an empty reply" };
+      }
+      emptyReplies = 0;
+      let json = null;
+      try { json = JSON.parse(text); } catch {}
+      if (json && json.status_code === 0) return { outcome: "unfollowed" };
+      if (!json) {
+        // only the request's size was visible: trust it if the button stayed flipped
+        await new Promise((r) => setTimeout(r, 1500));
+        return ONE_WAY.includes(label(b)) ? { outcome: "failed", detail: "button flipped back" } : { outcome: "unfollowed" };
+      }
+      const msg = `${json.status_code}: ${json.status_msg || ""}`;
+      return /limit|frequent|too fast|too many|try again|later|slow/i.test(msg) ? { outcome: "blocked", detail: msg } : { outcome: "failed", detail: msg };
     },
   });
 })();

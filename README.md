@@ -23,7 +23,9 @@ If a scan is interrupted, Unfollow stays off so you don't act on a partial list.
 3. Click the bookmark, then **Scan**. It scrolls the list and collects everyone whose button says "Following" (not "Friends").
 4. Tick people or click **Select all non-followers**, then **Unfollow** and **Yes, unfollow**.
 
-It reads the button labels, so it works when TikTok is set to English or Spanish. If the scan stops at 30 accounts, TikTok isn't loading more of the list in that browser: unfollow that batch, close and reopen your Following list, and scan again.
+It reads the button labels, so it works when TikTok is set to English or Spanish.
+
+An unfollow only counts once TikTok's server confirms it, because TikTok flips the button to "Follow" before the server answers. If TikTok's server ignores this browser (it sends back empty replies, which can happen in embedded or automated browsers), the tool stops and tells you, instead of reporting unfollows that didn't happen. Use a regular browser like Chrome or Edge. If the scan stops at 30 accounts, TikTok isn't loading more of the list in that browser: unfollow that batch, close and reopen your Following list, and scan again.
 
 ## Both tools
 
@@ -36,7 +38,7 @@ It reads the button labels, so it works when TikTok is set to English or Spanish
 
 Neither Instagram nor TikTok publishes its unfollow limits, so the tools don't guess. They unfollow about every 2–3 seconds and slow down only when the site pushes back:
 
-- **Pushback** means Instagram replies "action blocked" or "rate limited", TikTok shows a "too fast" message, or three unfollows in a row fail.
+- **Pushback** means Instagram replies "action blocked" or "rate limited", TikTok's server replies "too frequently", or three unfollows in a row fail.
 - Then the tool pauses (15 minutes the first time, doubling each time, up to 4 hours), doubles the gap between unfollows (up to 60 seconds), and retries where it stopped.
 
 Going fast makes temporary blocks more likely. They usually last hours to a couple of days, and repeated blocks can last longer. For a gentler pace, raise the time between unfollows or add rest breaks in ⚙ Settings.

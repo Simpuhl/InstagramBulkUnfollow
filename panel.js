@@ -1,6 +1,7 @@
 // Shared corner panel for the Social Unfollower bookmarklets. build.js bundles it in front of each platform script.
 // platform: { id, name, site, startKey, filters, defaults: { delay, restEvery, restSeconds, dailyLimit, backoffSeconds },
-//             profileUrl(user), scan(ctx) -> { users, partial, note? }, unfollow(user, ctx) -> { outcome, detail }, legacyWhitelist?() }
+//             profileUrl(user), scan(ctx) -> { users, partial, note? },
+//             unfollow(user, ctx) -> { outcome: "unfollowed" | "failed" | "blocked" | "fatal", detail }, legacyWhitelist?() }
 function socialUnfollower(platform) {
   if (document.getElementById("su-panel")) return;
 
@@ -53,6 +54,7 @@ function socialUnfollower(platform) {
       ttNoList: 'couldn\'t find your Following list. Open your profile and click your "Following" count first',
       ttLoading: "Loading your Following list… %s accounts so far",
       ttLoadingOf: "Loading your Following list… %s of %s",
+      ttRejected: "Stopped: TikTok is ignoring unfollows from this browser (its server sends back empty replies). Try a regular browser like Chrome or Edge.",
       ttWaiting: "TikTok is pausing before the next batch. Still waiting… (%s of %s loaded)",
       ttIncomplete: "Found %s non-followers in the first %s of %s accounts; TikTok stopped sending more. After unfollowing these, scan again for the rest.",
     },
@@ -92,6 +94,7 @@ function socialUnfollower(platform) {
       ttNoList: 'no se encontró tu lista de Siguiendo. Abre tu perfil y haz clic en tu número de "Siguiendo" primero',
       ttLoading: "Cargando tu lista de Siguiendo… %s cuentas por ahora",
       ttLoadingOf: "Cargando tu lista de Siguiendo… %s de %s",
+      ttRejected: "Detenido: TikTok está ignorando los unfollows desde este navegador (su servidor responde vacío). Prueba un navegador normal como Chrome o Edge.",
       ttWaiting: "TikTok está haciendo una pausa antes del siguiente lote. Esperando… (%s de %s cargadas)",
       ttIncomplete: "Se encontraron %s que no te siguen en las primeras %s de %s cuentas; TikTok dejó de enviar más. Después de dejar de seguirlas, vuelve a escanear para el resto.",
     },
@@ -201,6 +204,11 @@ function socialUnfollower(platform) {
         result = { outcome: "failed", detail: String(e) };
       }
       if (result.outcome !== "unfollowed") console.warn(`Unfollow of ${u.username} not confirmed: ${result.detail}`);
+      // the platform says carrying on is pointless (e.g. its server ignores this browser)
+      if (result.outcome === "fatal") {
+        note = result.detail;
+        break;
+      }
       failStreak = result.outcome === "failed" ? failStreak + 1 : 0;
 
       // three failures in a row usually means a quiet block rather than three bad accounts
