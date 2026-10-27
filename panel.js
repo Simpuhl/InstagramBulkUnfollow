@@ -1,5 +1,5 @@
 // Shared corner panel for the Social Unfollower bookmarklets. build.js bundles it in front of each platform script.
-// platform: { id, name, startKey, filters, defaults: { delay, restEvery, restSeconds, dailyLimit },
+// platform: { id, name, site, startKey, filters, defaults: { delay, restEvery, restSeconds, dailyLimit, backoffMinutes },
 //             profileUrl(user), scan(ctx) -> { users, partial, note? }, unfollow(user, ctx) -> { outcome, detail }, legacyWhitelist?() }
 function socialUnfollower(platform) {
   if (document.getElementById("su-panel")) return;
@@ -29,7 +29,8 @@ function socialUnfollower(platform) {
       settings: "Settings", back: "Back", save: "Save", saved: "Settings saved.",
       delay: "Seconds between unfollows", restEvery: "Rest after every N unfollows (0 = never)", restSeconds: "Rest length in seconds",
       dailyLimit: "Max unfollows per day (0 = no limit)", language: "Language",
-      riskNote: "Faster settings make a temporary block more likely. Use at your own risk.",
+      backoffMinutes: "First pause when the site pushes back (minutes)",
+      riskNote: "Unfollows run at this pace until the site pushes back; then it pauses (longer each time) and continues slower. Going fast makes temporary blocks more likely. Use at your own risk.",
       wlTitle: "Whitelist: %s accounts", wlExport: "Export", wlImport: "Import", wlPaste: "Add pasted usernames",
       wlPastePh: "Paste usernames, separated by spaces, commas or new lines",
       wlClear: "Clear whitelist", wlClearYes: "Yes, clear %s", wlAdded: "Added %s accounts to the whitelist.",
@@ -41,7 +42,7 @@ function socialUnfollower(platform) {
       scanFailed: "Scan failed: %s", scanStopped: "Scan stopped.",
       loadedCache: "Loaded scan from %s: %s accounts. Rescan if it's old.",
       unfollowing: "Unfollowing… %s/%s", resting: "Unfollowed %s. Resting %ss so you don't get blocked…",
-      blocked: "Blocked further unfollows. Stopped after %s. Wait a day before continuing.",
+      backingOff: "%s pushed back after %s of %s. Pausing %s, then continuing slower (about %ss between unfollows)…",
       dailyHit: "Stopped: reached %s unfollows today. Continue tomorrow.",
       unfollowDone: "Done. Unfollowed %s of %s.", unfollowStopped: "Stopped. Unfollowed %s of %s.",
       igNotLoggedIn: "You don't seem to be logged in. Log in to Instagram, then press Scan.",
@@ -67,7 +68,8 @@ function socialUnfollower(platform) {
       settings: "Ajustes", back: "Volver", save: "Guardar", saved: "Ajustes guardados.",
       delay: "Segundos entre cada unfollow", restEvery: "Descansar cada N unfollows (0 = nunca)", restSeconds: "Duración del descanso en segundos",
       dailyLimit: "Máximo de unfollows por día (0 = sin límite)", language: "Idioma",
-      riskNote: "Valores más rápidos aumentan el riesgo de un bloqueo temporal. Úsalo bajo tu propio riesgo.",
+      backoffMinutes: "Primera pausa cuando el sitio pone un freno (minutos)",
+      riskNote: "Los unfollows van a este ritmo hasta que el sitio pone un freno; entonces hace una pausa (cada vez más larga) y sigue más despacio. Ir rápido aumenta el riesgo de bloqueos temporales. Úsalo bajo tu propio riesgo.",
       wlTitle: "Lista blanca: %s cuentas", wlExport: "Exportar", wlImport: "Importar", wlPaste: "Añadir usuarios pegados",
       wlPastePh: "Pega usuarios separados por espacios, comas o saltos de línea",
       wlClear: "Borrar lista blanca", wlClearYes: "Sí, borrar %s", wlAdded: "Se añadieron %s cuentas a la lista blanca.",
@@ -79,7 +81,7 @@ function socialUnfollower(platform) {
       scanFailed: "Error en el escaneo: %s", scanStopped: "Escaneo detenido.",
       loadedCache: "Escaneo cargado del %s: %s cuentas. Vuelve a escanear si es antiguo.",
       unfollowing: "Dejando de seguir… %s/%s", resting: "%s dejados de seguir. Descansando %ss para evitar bloqueos…",
-      blocked: "Se bloquearon más unfollows. Detenido tras %s. Espera un día antes de continuar.",
+      backingOff: "%s puso un freno tras %s de %s. Pausa de %s, luego sigue más despacio (unos %ss entre cada unfollow)…",
       dailyHit: "Detenido: llegaste a %s unfollows hoy. Continúa mañana.",
       unfollowDone: "Listo. Dejaste de seguir a %s de %s.", unfollowStopped: "Detenido. Dejaste de seguir a %s de %s.",
       igNotLoggedIn: "Parece que no has iniciado sesión. Entra en Instagram y pulsa Escanear.",
@@ -97,7 +99,7 @@ function socialUnfollower(platform) {
   let lang = load("su_lang", null) || ((navigator.language || "").toLowerCase().startsWith("es") ? "es" : "en");
   const t = (k, ...args) => args.reduce((s, v) => s.replace("%s", v), STRINGS[lang][k] ?? STRINGS.en[k] ?? k);
 
-  let settings = { ...platform.defaults, ...load(key("settings"), {}) };
+  let settings = { ...platform.defaults, ...load(key("pacing"), {}) };
   let whitelist = new Set(load(key("whitelist"), null) ?? (platform.legacyWhitelist ? platform.legacyWhitelist() : []));
   let users = []; // { username, name, avatar, verified, isPrivate, noPic, result, ...platform fields }
   let selected = new Set(); // usernames
@@ -163,6 +165,16 @@ function socialUnfollower(platform) {
     render();
   }
 
+  // Countdowns update only the message line; a full render every second is heavy with thousands of rows.
+  function say(text) {
+    message = text;
+    const el = top.querySelector(".su-msg");
+    if (el) el.textContent = text;
+  }
+  const clock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  // Neither site publishes unfollow limits, so go at the configured pace and slow down only when the site
+  // pushes back: pause (longer each time), double the gap between unfollows, then retry where it stopped.
   async function unfollow() {
     const queue = users.filter((u) => selected.has(u.username) && !isWl(u) && u.result !== "done");
     if (!queue.length || partial) return;
@@ -171,8 +183,11 @@ function socialUnfollower(platform) {
     stopRequested = false;
     let done = 0;
     let note = null;
-    for (const [i, u] of queue.entries()) {
-      if (stopRequested) break;
+    let delay = settings.delay;
+    let pushbacks = 0;
+    let failStreak = 0;
+    for (let i = 0; i < queue.length && !stopRequested; ) {
+      const u = queue[i];
       if (settings.dailyLimit > 0 && todayCount() >= settings.dailyLimit) {
         note = t("dailyHit", settings.dailyLimit);
         break;
@@ -184,6 +199,26 @@ function socialUnfollower(platform) {
         result = { outcome: "failed", detail: String(e) };
       }
       if (result.outcome !== "unfollowed") console.warn(`Unfollow of ${u.username} not confirmed: ${result.detail}`);
+      failStreak = result.outcome === "failed" ? failStreak + 1 : 0;
+
+      // three failures in a row usually means a quiet block rather than three bad accounts
+      if (result.outcome === "blocked" || failStreak >= 3) {
+        if (failStreak >= 3) {
+          i -= 2; // retry the whole streak after the pause
+          queue.slice(i, i + 3).forEach((q) => delete q.result);
+        }
+        failStreak = 0;
+        pushbacks++;
+        delay = Math.min(Math.max(delay, 1) * 2, 60);
+        const pause = Math.min(settings.backoffMinutes * 2 ** (pushbacks - 1), 240) * 60;
+        render();
+        for (let s = pause; s > 0 && !stopRequested; s--) {
+          say(t("backingOff", platform.site, done, queue.length, clock(s), delay));
+          await sleep(1000);
+        }
+        continue;
+      }
+
       u.result = result.outcome === "unfollowed" ? "done" : "failed";
       if (u.result === "done") {
         bumpToday();
@@ -192,16 +227,12 @@ function socialUnfollower(platform) {
       }
       message = t("unfollowing", done, queue.length);
       render();
-      if (result.outcome === "blocked") {
-        note = t("blocked", done);
-        break;
-      }
-      if (i === queue.length - 1) break;
-      await sleep(settings.delay * 1000 * (1 + Math.random() * 0.5));
+      i++;
+      if (i === queue.length) break;
+      await sleep(delay * 1000 * (1 + Math.random() * 0.5));
       if (settings.restEvery > 0 && u.result === "done" && done % settings.restEvery === 0) {
         for (let s = settings.restSeconds; s > 0 && !stopRequested; s--) {
-          message = t("resting", done, s);
-          render();
+          say(t("resting", done, s));
           await sleep(1000);
         }
       }
@@ -426,6 +457,7 @@ function socialUnfollower(platform) {
       ${num("restEvery", "restEvery")}
       ${num("restSeconds", "restSeconds")}
       ${num("dailyLimit", "dailyLimit")}
+      ${num("backoffMinutes", "backoffMinutes")}
       <label>${t("language")} <select data-setting="lang"><option value="en" ${lang === "en" ? "selected" : ""}>English</option><option value="es" ${lang === "es" ? "selected" : ""}>Español</option></select></label>
       <div class="su-note">${t("riskNote")}</div>
       <h4 class="su-wl-title">${t("wlTitle", whitelist.size)}</h4>
@@ -510,7 +542,7 @@ function socialUnfollower(platform) {
         settingsView.querySelectorAll("input[data-setting]").forEach((input) => {
           settings[input.dataset.setting] = Math.max(0, Number(input.value) || 0);
         });
-        save(key("settings"), settings);
+        save(key("pacing"), settings);
         lang = settingsView.querySelector('select[data-setting="lang"]').value;
         save("su_lang", lang);
         view = "list";

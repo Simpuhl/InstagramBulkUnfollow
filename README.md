@@ -30,13 +30,16 @@ It reads the button labels, so it works when TikTok is set to English or Spanish
 - **Whitelist:** click ★ next to someone, or tick people and click **Add to whitelist**. Whitelisted accounts are never selected or unfollowed. In ⚙ Settings you can export, import, paste usernames into, or clear the whitelist.
 - **Search** the list, and **Copy list**, **JSON** or **CSV** to export who doesn't follow you back.
 - **Load last scan** reopens your previous results without rescanning.
-- **⚙ Settings:** time between unfollows, rest breaks, an optional daily cap (off by default), and English/Spanish.
+- **⚙ Settings:** time between unfollows, optional rest breaks, an optional daily cap (off by default), how long to pause when the site pushes back, and English/Spanish.
 
-Default pacing, to avoid temporary blocks from the platforms:
-- Instagram: about 4 seconds between unfollows and a 5-minute rest after every 5.
-- TikTok: about 4 seconds between unfollows and a 1-minute rest after every 10.
+## Pacing
 
-If the platform blocks an action, the tool stops and tells you.
+Neither Instagram nor TikTok publishes its unfollow limits, so the tools don't guess. They unfollow about every 2–3 seconds and slow down only when the site pushes back:
+
+- **Pushback** means Instagram replies "action blocked" or "rate limited", TikTok shows a "too fast" message, or three unfollows in a row fail.
+- Then the tool pauses (15 minutes the first time, doubling each time, up to 4 hours), doubles the gap between unfollows (up to 60 seconds), and retries where it stopped.
+
+Going fast makes temporary blocks more likely. They usually last hours to a couple of days, and repeated blocks can last longer. For a gentler pace, raise the time between unfollows or add rest breaks in ⚙ Settings.
 
 ## Develop
 

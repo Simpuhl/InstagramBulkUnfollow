@@ -145,8 +145,9 @@
   socialUnfollower({
     id: "igu",
     name: "Instagram Unfollower",
+    site: "Instagram",
     filters: true,
-    defaults: { delay: 4, restEvery: 5, restSeconds: 300, dailyLimit: 0 },
+    defaults: { delay: 2, restEvery: 0, restSeconds: 60, dailyLimit: 0, backoffMinutes: 15 }, // fast; the panel backs off when Instagram pushes back
     profileUrl: (u) => `/${u.username}/`,
     // whitelist saved by the previous full-page version (user objects)
     legacyWhitelist() {

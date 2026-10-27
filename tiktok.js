@@ -62,9 +62,10 @@
   socialUnfollower({
     id: "tbu",
     name: "TikTok Unfollower",
+    site: "TikTok",
     startKey: "ttStart",
     filters: false,
-    defaults: { delay: 4, restEvery: 10, restSeconds: 60, dailyLimit: 0 }, // no cap by default; set one in Settings if TikTok starts blocking
+    defaults: { delay: 2, restEvery: 0, restSeconds: 60, dailyLimit: 0, backoffMinutes: 15 }, // fast; the panel backs off when TikTok pushes back
     profileUrl: (u) => `/@${u.username}`,
 
     async scan(ctx) {
@@ -119,7 +120,12 @@
       b.scrollIntoView({ block: "center" });
       b.click();
       await new Promise((r) => setTimeout(r, 1500));
-      return ONE_WAY.includes(label(b)) ? { outcome: "failed", detail: "button didn't change after clicking" } : { outcome: "unfollowed" };
+      if (!ONE_WAY.includes(label(b))) return { outcome: "unfollowed" };
+      // TikTok says so in a toast when you're going too fast
+      const warning = [...document.querySelectorAll('[role="alert"], [class*="toast" i], [class*="Toast"]')]
+        .map((el) => el.textContent)
+        .find((text) => /too fast|too many|try again later|limit|frequent|slow down|demasiado|más tarde|límite/i.test(text));
+      return warning ? { outcome: "blocked", detail: warning.trim() } : { outcome: "failed", detail: "button didn't change after clicking" };
     },
   });
 })();
