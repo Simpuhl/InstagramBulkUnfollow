@@ -153,13 +153,16 @@
       b.click();
 
       // The button flips to "Follow" before TikTok's server answers, so judge by the server's reply instead.
+      // TikTok's code adds signature params after our fetch hook sees the URL, so the body and the timing entry
+      // land as separate records; prefer the one with the body and fall back to the size-only one.
+      const isOurs = (c) => c.at >= since && /[?&]action_type=0\b/.test(c.url);
       let reply;
       for (let i = 0; i < 40 && !reply; i++) {
         await new Promise((r) => setTimeout(r, 200));
-        reply = window.__suCommits.find((c) => c.at >= since && /[?&]action_type=0\b/.test(c.url) && (c.text !== undefined || c.size !== undefined));
+        reply = window.__suCommits.find((c) => isOurs(c) && c.text !== undefined);
+        if (!reply && i >= 10) reply = window.__suCommits.find((c) => isOurs(c) && c.size !== undefined);
       }
       if (!reply) return { outcome: "failed", detail: "TikTok didn't send an unfollow request after the click" };
-      if (reply.text === undefined) await new Promise((r) => setTimeout(r, 500)); // body may arrive just after the timing entry
       const text = reply.text;
       if (text === "" || (text === undefined && reply.size === 0)) {
         // an empty reply means TikTok's server ignored the request (it does this when it treats the browser as a bot)
