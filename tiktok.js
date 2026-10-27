@@ -65,7 +65,7 @@
     site: "TikTok",
     startKey: "ttStart",
     filters: false,
-    defaults: { delay: 2, restEvery: 0, restSeconds: 60, dailyLimit: 0, backoffMinutes: 15 }, // fast; the panel backs off when TikTok pushes back
+    defaults: { delay: 2, restEvery: 0, restSeconds: 60, dailyLimit: 0, backoffSeconds: 30 }, // fast; the panel backs off when TikTok pushes back
     profileUrl: (u) => `/@${u.username}`,
 
     async scan(ctx) {

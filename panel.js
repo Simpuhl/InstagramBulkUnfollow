@@ -1,5 +1,5 @@
 // Shared corner panel for the Social Unfollower bookmarklets. build.js bundles it in front of each platform script.
-// platform: { id, name, site, startKey, filters, defaults: { delay, restEvery, restSeconds, dailyLimit, backoffMinutes },
+// platform: { id, name, site, startKey, filters, defaults: { delay, restEvery, restSeconds, dailyLimit, backoffSeconds },
 //             profileUrl(user), scan(ctx) -> { users, partial, note? }, unfollow(user, ctx) -> { outcome, detail }, legacyWhitelist?() }
 function socialUnfollower(platform) {
   if (document.getElementById("su-panel")) return;
@@ -22,14 +22,14 @@ function socialUnfollower(platform) {
       scan: "Scan", stop: "Stop", stopping: "Stopping…", loadLast: "Load last scan",
       selectAll: "Select all non-followers", selectShown: "Select all shown", clear: "Clear",
       selVerified: "+ Verified", selPrivate: "+ Private", selNoPic: "+ No pic",
-      addWl: "Add to whitelist (%s)", unfollowN: "Unfollow (%s)", yesUnfollow: "Yes, unfollow %s", cancel: "Cancel",
+      addWl: "Add to whitelist (%s)", unfollowN: "Unfollow (%s)", yesUnfollow: "Yes, unfollow %s (★ %s kept)", cancel: "Cancel",
       search: "Search users…", show: "Show:", verified: "Verified", private: "Private", noPic: "No pic",
       whitelisted: "WHITELISTED (%s)", unfollowed: "Unfollowed", failed: "Failed",
       copy: "Copy list", copied: "Copied %s usernames.", copyFailed: "Your browser blocked copying. Use JSON or CSV instead.",
       settings: "Settings", back: "Back", save: "Save", saved: "Settings saved.",
       delay: "Seconds between unfollows", restEvery: "Rest after every N unfollows (0 = never)", restSeconds: "Rest length in seconds",
       dailyLimit: "Max unfollows per day (0 = no limit)", language: "Language",
-      backoffMinutes: "First pause when the site pushes back (minutes)",
+      backoffSeconds: "First pause when the site pushes back (seconds)",
       riskNote: "Unfollows run at this pace until the site pushes back; then it pauses (longer each time) and continues slower. Going fast makes temporary blocks more likely. Use at your own risk.",
       wlTitle: "Whitelist: %s accounts", wlExport: "Export", wlImport: "Import", wlPaste: "Add pasted usernames",
       wlPastePh: "Paste usernames, separated by spaces, commas or new lines",
@@ -61,14 +61,14 @@ function socialUnfollower(platform) {
       scan: "Escanear", stop: "Detener", stopping: "Deteniendo…", loadLast: "Cargar último escaneo",
       selectAll: "Seleccionar a quienes no te siguen", selectShown: "Seleccionar los mostrados", clear: "Limpiar",
       selVerified: "+ Verificados", selPrivate: "+ Privados", selNoPic: "+ Sin foto",
-      addWl: "Añadir a lista blanca (%s)", unfollowN: "Dejar de seguir (%s)", yesUnfollow: "Sí, dejar de seguir %s", cancel: "Cancelar",
+      addWl: "Añadir a lista blanca (%s)", unfollowN: "Dejar de seguir (%s)", yesUnfollow: "Sí, dejar de seguir %s (★ %s se mantienen)", cancel: "Cancelar",
       search: "Buscar usuarios…", show: "Mostrar:", verified: "Verificados", private: "Privados", noPic: "Sin foto",
       whitelisted: "LISTA BLANCA (%s)", unfollowed: "Dejado de seguir", failed: "Falló",
       copy: "Copiar lista", copied: "Se copiaron %s usuarios.", copyFailed: "Tu navegador bloqueó la copia. Usa JSON o CSV.",
       settings: "Ajustes", back: "Volver", save: "Guardar", saved: "Ajustes guardados.",
       delay: "Segundos entre cada unfollow", restEvery: "Descansar cada N unfollows (0 = nunca)", restSeconds: "Duración del descanso en segundos",
       dailyLimit: "Máximo de unfollows por día (0 = sin límite)", language: "Idioma",
-      backoffMinutes: "Primera pausa cuando el sitio pone un freno (minutos)",
+      backoffSeconds: "Primera pausa cuando el sitio pone un freno (segundos)",
       riskNote: "Los unfollows van a este ritmo hasta que el sitio pone un freno; entonces hace una pausa (cada vez más larga) y sigue más despacio. Ir rápido aumenta el riesgo de bloqueos temporales. Úsalo bajo tu propio riesgo.",
       wlTitle: "Lista blanca: %s cuentas", wlExport: "Exportar", wlImport: "Importar", wlPaste: "Añadir usuarios pegados",
       wlPastePh: "Pega usuarios separados por espacios, comas o saltos de línea",
@@ -175,6 +175,7 @@ function socialUnfollower(platform) {
 
   // Neither site publishes unfollow limits, so go at the configured pace and slow down only when the site
   // pushes back: pause (longer each time), double the gap between unfollows, then retry where it stopped.
+  // After a good run it eases back toward the configured pace.
   async function unfollow() {
     const queue = users.filter((u) => selected.has(u.username) && !isWl(u) && u.result !== "done");
     if (!queue.length || partial) return;
@@ -186,6 +187,7 @@ function socialUnfollower(platform) {
     let delay = settings.delay;
     let pushbacks = 0;
     let failStreak = 0;
+    let okStreak = 0;
     for (let i = 0; i < queue.length && !stopRequested; ) {
       const u = queue[i];
       if (settings.dailyLimit > 0 && todayCount() >= settings.dailyLimit) {
@@ -208,9 +210,11 @@ function socialUnfollower(platform) {
           queue.slice(i, i + 3).forEach((q) => delete q.result);
         }
         failStreak = 0;
+        okStreak = 0;
         pushbacks++;
+        console.warn(`${platform.site} pushed back (${result.detail || "3 failures in a row"}); pause #${pushbacks}`);
         delay = Math.min(Math.max(delay, 1) * 2, 60);
-        const pause = Math.min(settings.backoffMinutes * 2 ** (pushbacks - 1), 240) * 60;
+        const pause = Math.min(settings.backoffSeconds * 2 ** (pushbacks - 1), 4 * 3600);
         render();
         for (let s = pause; s > 0 && !stopRequested; s--) {
           say(t("backingOff", platform.site, done, queue.length, clock(s), delay));
@@ -224,6 +228,10 @@ function socialUnfollower(platform) {
         bumpToday();
         done++;
         selected.delete(u.username);
+        if (++okStreak % 25 === 0) {
+          delay = Math.max(settings.delay, delay / 2);
+          pushbacks = Math.max(0, pushbacks - 1);
+        }
       }
       message = t("unfollowing", done, queue.length);
       render();
@@ -391,7 +399,7 @@ function socialUnfollower(platform) {
       `<button data-action="pick" data-pick="${k}" ${busy || !shown.some((u) => u[k]) ? "disabled" : ""}>${t(label)}</button>`;
 
     top.innerHTML = `
-      <header><span>${esc(platform.name)} · ${t("notFollowing", active.length)}</span><button data-action="close" title="Close">✕</button></header>
+      <header><span>${esc(platform.name)} · ${t("notFollowing", active.length)} · <span title="${esc(t("wlTitle", whitelist.size))}">★ ${whitelist.size}</span></span><button data-action="close" title="Close">✕</button></header>
       <div class="su-msg">${esc(message)}${limit}</div>
       ${view === "list" ? `
       <div class="su-row">
@@ -407,7 +415,7 @@ function socialUnfollower(platform) {
       <div class="su-row">
         <button data-action="wl-add" ${busy || !selected.size ? "disabled" : ""}>${t("addWl", selected.size)}</button>
         ${confirming
-          ? `<button class="su-danger" data-action="unfollow-yes">${t("yesUnfollow", selected.size)}</button><button data-action="unfollow-no">${t("cancel")}</button>`
+          ? `<button class="su-danger" data-action="unfollow-yes">${t("yesUnfollow", selected.size, whitelist.size)}</button><button data-action="unfollow-no">${t("cancel")}</button>`
           : `<button class="su-danger" data-action="unfollow" ${busy || !selected.size || partial ? "disabled" : ""}>${t("unfollowN", selected.size)}</button>`}
       </div>` : ""}`;
 
@@ -457,7 +465,7 @@ function socialUnfollower(platform) {
       ${num("restEvery", "restEvery")}
       ${num("restSeconds", "restSeconds")}
       ${num("dailyLimit", "dailyLimit")}
-      ${num("backoffMinutes", "backoffMinutes")}
+      ${num("backoffSeconds", "backoffSeconds")}
       <label>${t("language")} <select data-setting="lang"><option value="en" ${lang === "en" ? "selected" : ""}>English</option><option value="es" ${lang === "es" ? "selected" : ""}>Español</option></select></label>
       <div class="su-note">${t("riskNote")}</div>
       <h4 class="su-wl-title">${t("wlTitle", whitelist.size)}</h4>
