@@ -39,7 +39,7 @@ An unfollow only counts once TikTok's server confirms it, because TikTok flips t
 Neither Instagram nor TikTok publishes its unfollow limits, so the tools don't guess. They unfollow about every 2–3 seconds and slow down only when the site pushes back:
 
 - **Pushback** means Instagram replies "action blocked" or "rate limited", TikTok's server replies "too frequently", or three unfollows in a row fail.
-- Then the tool pauses (15 minutes the first time, doubling each time, up to 4 hours), doubles the gap between unfollows (up to 60 seconds), and retries where it stopped.
+- Then the tool pauses (the first time 15 minutes on Instagram, 30 seconds on TikTok; doubling each time, up to 4 hours), doubles the gap between unfollows (up to 60 seconds), and retries where it stopped. After 25 good unfollows in a row it eases back toward full speed.
 
 Going fast makes temporary blocks more likely. They usually last hours to a couple of days, and repeated blocks can last longer. For a gentler pace, raise the time between unfollows or add rest breaks in ⚙ Settings.
 
