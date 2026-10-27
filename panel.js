@@ -1,7 +1,8 @@
 // Shared corner panel for the Social Unfollower bookmarklets. build.js bundles it in front of each platform script.
 // platform: { id, name, site, startKey, filters, defaults: { delay, restEvery, restSeconds, dailyLimit, backoffSeconds },
 //             profileUrl(user), scan(ctx) -> { users, partial, note? },
-//             unfollow(user, ctx) -> { outcome: "unfollowed" | "failed" | "blocked" | "fatal", detail }, legacyWhitelist?() }
+//             unfollow(user, ctx) -> { outcome: "unfollowed" | "failed" | "blocked" | "fatal", detail, noStreak? },
+//             legacyWhitelist?() }
 function socialUnfollower(platform) {
   if (document.getElementById("su-panel")) return;
 
@@ -209,7 +210,7 @@ function socialUnfollower(platform) {
         note = result.detail;
         break;
       }
-      failStreak = result.outcome === "failed" ? failStreak + 1 : 0;
+      if (!result.noStreak) failStreak = result.outcome === "failed" ? failStreak + 1 : 0;
 
       // three failures in a row usually means a quiet block rather than three bad accounts
       if (result.outcome === "blocked" || failStreak >= 3) {

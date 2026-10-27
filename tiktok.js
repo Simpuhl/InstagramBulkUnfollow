@@ -139,15 +139,32 @@
 
     async unfollow(user, ctx) {
       watchCommits();
-      // TikTok may re-render the list (or this is a cached scan), so find the button again if ours is gone
-      let b = user.button && user.button.isConnected ? user.button : null;
-      if (!b) {
-        const fresh = followButtons(findDialog() || document).map(rowInfo).find((x) => x && x.username === user.username);
-        b = fresh && fresh.button;
+      // After "Load last scan" (or if TikTok re-renders the list) the row may not be on the page; page through
+      // TikTok's list again until it shows up.
+      const look = () => {
+        const dialog = findDialog();
+        const row = dialog && followButtons(dialog).map(rowInfo).find((x) => x && x.username === user.username);
+        return row && row.button;
+      };
+      let b = user.button && user.button.isConnected ? user.button : look();
+      for (let i = 0; !b && i < 40 && !ctx.stopped(); i++) {
+        const dialog = findDialog();
+        if (!dialog) break;
+        const box = scrollBox(dialog);
+        box.scrollTop = box.scrollHeight;
+        box.dispatchEvent(new Event("scroll"));
+        try {
+          tiktokLoadMore(box)?.();
+        } catch (e) {
+          console.warn("TikTok load-more failed:", e);
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+        b = look();
       }
       // after a rejected unfollow TikTok shows "Follow" for a moment before flipping back; wait for that on a retry
       for (let i = 0; i < 20 && b && !ONE_WAY.includes(label(b)); i++) await new Promise((r) => setTimeout(r, 200));
-      if (!b || !ONE_WAY.includes(label(b))) return { outcome: "failed", detail: "not in the open Following list" };
+      // a missing row says nothing about TikTok's limits, so it doesn't count toward the pushback streak
+      if (!b || !ONE_WAY.includes(label(b))) return { outcome: "failed", detail: "not in the open Following list", noStreak: true };
       b.scrollIntoView({ block: "center" });
       const since = Date.now();
       b.click();
