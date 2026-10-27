@@ -25,7 +25,7 @@ If a scan is interrupted, Unfollow stays off so you don't act on a partial list.
 
 It reads the button labels, so it works when TikTok is set to English or Spanish.
 
-An unfollow only counts once TikTok's server confirms it, because TikTok flips the button to "Follow" before the server answers. If TikTok's server ignores this browser (it sends back empty replies, which can happen in embedded or automated browsers), the tool stops and tells you, instead of reporting unfollows that didn't happen. Use a regular browser like Chrome or Edge. If the scan stops at 30 accounts, TikTok isn't loading more of the list in that browser: unfollow that batch, close and reopen your Following list, and scan again.
+An unfollow only counts once TikTok's server confirms it, because TikTok flips the button to "Follow" before the server answers. If TikTok's server ignores the unfollows (it sends back empty replies), the tool stops and tells you, instead of reporting unfollows that didn't happen. That usually means a DNS filter (like Pi-hole or Technitium), an ad blocker or tracking protection is blocking TikTok's scripts; allow tiktok.com and reload. If the scan stops at 30 accounts, TikTok isn't loading more of the list in that browser: unfollow that batch, close and reopen your Following list, and scan again.
 
 ## Both tools
 
